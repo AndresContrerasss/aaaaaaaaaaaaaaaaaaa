@@ -27,7 +27,7 @@ Programa de escritorio en **Java 21 + Swing**, con **Maven**, arquitectura **MVC
 12. [Dónde está cada concepto de POO](#12-dónde-está-cada-concepto-de-poo)
 13. [Reglas importantes](#13-reglas-importantes)
 14. [Referencias de estilo visual](#14-referencias-de-estilo-visual)
-15. [Trabajo en equipo](#15-trabajo-en-equipo)
+
 
 ## 1. Qué necesitas instalar
 JDK 21 • Maven 3.9 o superior • DBeaver • Una cuenta gratuita en https://neon.tech
@@ -669,8 +669,4 @@ Los colores y la tipografía están definidos en `vista/Estilo.java`.
 - Fuente: `SansSerif`, tamaño 13 (títulos en negrita de 26).
 - Logo: `src/main/resources/logo.png`; reemplázalo por el archivo original para que se vea con más nitidez.
 
-## 15. Trabajo en equipo
-- Cómo clonar, crear ramas, escribir commits y abrir Pull Requests: **`CONTRIBUTING.md`**.
-- Quién es responsable de cada módulo y de cada prueba: **`docs/REPARTO_DE_TRABAJO.md`** (también `docs/TAREAS_POR_INTEGRANTE.md`, `docs/PLAN_DE_COMMITS.md` y `docs/SUBIR_A_GITHUB.md`).
-- Detalle de las pruebas por capa: **`docs/PRUEBAS_POR_CAPA.md`**.
-- Cada push y cada Pull Request hacia `main` dispara la **CI** (`.github/workflows/ci.yml`), que compila y corre `mvn test` automáticamente.
+
