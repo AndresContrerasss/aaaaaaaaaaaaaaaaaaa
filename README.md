@@ -27,6 +27,7 @@ Programa de escritorio en **Java 21 + Swing**, con **Maven**, arquitectura **MVC
 12. [Dónde está cada concepto de POO](#12-dónde-está-cada-concepto-de-poo)
 13. [Reglas importantes](#13-reglas-importantes)
 14. [Referencias de estilo visual](#14-referencias-de-estilo-visual)
+15. [Trabajo en equipo](#15-trabajo-en-equipo)
 
 ## 1. Qué necesitas instalar
 JDK 21 • Maven 3.9 o superior • DBeaver • Una cuenta gratuita en https://neon.tech
@@ -41,8 +42,12 @@ JDK 21 • Maven 3.9 o superior • DBeaver • Una cuenta gratuita en https://n
 
 ## 3. Configurar la conexión con Neon
 La base de datos **no está en el computador**: vive en Neon (PostgreSQL en la nube) y el programa se conecta por internet con **JDBC** y SSL.
-Edita `src/main/resources/config.properties` (o deja una copia junto al `.jar`). El repositorio trae `config.properties.example` como plantilla;
-el archivo real está en `.gitignore` para **no subir tu clave a GitHub**:
+Edita `src/main/resources/config.properties` (o deja una copia junto al `.jar`). El repositorio trae `config.properties.ejemplo` como plantilla;
+el archivo real está en `.gitignore` para **no subir tu clave a GitHub** (cada integrante crea el suyo):
+
+    cp src/main/resources/config.properties.ejemplo src/main/resources/config.properties
+
+Luego edita los datos:
 
     db.url=jdbc:postgresql://ep-xxxx.us-east-2.aws.neon.tech/neondb?sslmode=require
     db.usuario=tu_usuario
@@ -117,8 +122,10 @@ Maven funciona por **convención sobre configuración**: si se respetan estas ca
 bordados-jmym/
 ├── pom.xml                              # descriptor de Maven (dependencias, plugins, Java 21)
 ├── README.md
+├── CONTRIBUTING.md                      # cómo trabajar en equipo (ramas, commits, Pull Requests)
+├── .github/workflows/ci.yml             # CI: compila y corre mvn test en cada push y Pull Request
 ├── sql/                                 # scripts de la base de datos
-├── docs/                                # diagramas (.mmd editable + .png)
+├── docs/                                # diagramas (.mmd + .png) y documentos del equipo (.md)
 └── src/
     ├── main/
     │   ├── java/
@@ -147,18 +154,22 @@ bordados-jmym/
     │   │           │   └── DialogoOrden.java  DialogoDetalle.java
     │   │           └── util/                         # Constantes, Validador, Formato, SeguridadUtil, NegocioException
     │   └── resources/
-    │       ├── config.properties                     # datos de conexión (no se sube a GitHub)
+    │       ├── config.properties.ejemplo             # plantilla de la conexión
+    │       ├── config.properties                     # datos de conexión reales (no se sube a GitHub)
     │       └── logo.png
     └── test/
         └── java/
             └── com/
                 └── jmym/
-                    ├── util/                         # ValidadorTest, SeguridadUtilTest, FormatoYConstantesTest
-                    ├── modelo/                       # BordadoTest, OrdenTest, PersonasYUsuariosTest
-                    └── controlador/                  # ControladoresTest
+                    ├── util/            # ValidadorTest, SeguridadUtilTest, FormatoTest, ConstantesTest, NegocioExceptionTest
+                    ├── modelo/          # PersonaTest, ClienteTest, UsuarioTest, GerenteTest, DisenadorTest, UsuarioFactoryTest,
+                    │                    # SedeTest, BordadoTest, OrdenTest, PagoTest, ResultadoReporteTest
+                    └── controlador/     # SesionTest, LoginControladorTest, UsuarioControladorTest, SedeControladorTest,
+                                         # OrdenControladorTest, PagoControladorTest, ReporteControladorTest,
+                                         # PagoControladorIT (con BD, deshabilitada) y UsuariosDePrueba (ayuda)
 ```
 
-52 archivos de código en `src/main` (unas 2.400 líneas) y 7 clases de prueba. `target/` lo genera Maven y no se sube a GitHub.
+52 archivos de código en `src/main` (unas 2.400 líneas) y 23 clases de prueba (105 pruebas). `target/` lo genera Maven y no se sube a GitHub.
 
 ## 7. Diagramas de referencia
 
@@ -431,7 +442,7 @@ ejecutan todas las anteriores.
 |---|---|
 | `validate` | Comprueba que el `pom.xml` sea correcto |
 | `compile` | Compila `src/main/java` con Java 21 (maven-compiler-plugin) |
-| `test` | Ejecuta las pruebas JUnit (maven-surefire-plugin) |
+| `test` | Ejecuta las pruebas JUnit (maven-surefire-plugin) y genera el reporte de cobertura (JaCoCo) |
 | `package` | Crea `target/bordados-jmym-1.0.jar` y el *shade* agrega las dependencias |
 | `verify` | Verifica que el paquete sea válido |
 | `install` | Copia el `.jar` al repositorio local `~/.m2` |
@@ -455,7 +466,7 @@ El **POM** (*Project Object Model*) es el archivo que describe el proyecto a Mav
 | `<version>` | `1.0` | Versión; junto a los dos anteriores forma las *coordenadas* del proyecto |
 | `<name>` | Sistema de Gestión de Pedidos... | Nombre legible |
 | `<packaging>` | `jar` | Tipo de resultado que se genera |
-| `<properties>` | `maven.compiler.release=21`, `project.build.sourceEncoding=UTF-8`, `clase.principal=com.jmym.App` | Variables reutilizables con `${...}`: versión de Java, codificación (tildes) y clase con `main` |
+| `<properties>` | `maven.compiler.release=21`, `project.build.sourceEncoding=UTF-8`, `clase.principal=com.jmym.App`, `junit.version`, `surefire.version`, `jacoco.version` | Variables reutilizables con `${...}`: versión de Java, codificación (tildes), clase con `main` y versiones de las herramientas de prueba |
 | `<dependencies>` | `postgresql 42.7.4` | Driver JDBC para hablar con Neon |
 | | `junit-jupiter 5.11.3` con `<scope>test</scope>` | JUnit 5; el *scope test* significa que solo se usa al probar y no entra al `.jar` |
 | `<build><plugins>` | ver abajo | Herramientas que ejecutan las fases |
@@ -463,33 +474,130 @@ El **POM** (*Project Object Model*) es el archivo que describe el proyecto a Mav
 **Plugins:**
 - `maven-compiler-plugin 3.13.0`: compila el código con Java 21.
 - `maven-surefire-plugin 3.5.2`: ejecuta las pruebas JUnit en la fase `test`.
+- `jacoco-maven-plugin 0.8.12`: mide qué porcentaje del código recorren las pruebas; genera `target/site/jacoco/index.html` al correr `mvn test`.
 - `exec-maven-plugin 3.5.0`: permite `mvn compile exec:java` usando `mainClass = ${clase.principal}`.
 - `maven-shade-plugin 3.5.3`: enlazado a la fase `package` (`<phase>`) con el *goal* `shade`; crea un único `.jar` con todas las dependencias y escribe en el manifiesto la clase principal (`ManifestResourceTransformer`), así `java -jar` funciona.
 
 ## 10. Pruebas unitarias con JUnit
-Las pruebas están en `src/test/java/com/jmym` y usan **JUnit 5 (Jupiter)**. Verifican reglas de negocio y validaciones que se resuelven
-**antes de llegar a la base de datos**, por eso **no necesitan conexión a Neon** y se pueden ejecutar en cualquier equipo.
+El proyecto trae **23 clases de prueba con 105 pruebas** hechas con **JUnit 5 (Jupiter)**, más 3 pruebas de integración deshabilitadas (`@Disabled`).
+Verifican la **lógica de negocio**: validaciones, cálculos de total y saldo, secuencia de estados, permisos por rol y seguridad de las contraseñas.
+**Ninguna necesita conexión a Neon:** los controladores se prueban en lo que se resuelve **antes** de llegar al DAO (permisos y validaciones).
 
-| Clase de prueba | Qué verifica |
-|---|---|
-| `util/ValidadorTest` | Campos vacíos, solo dígitos, correo válido, conversión de dinero y enteros |
-| `util/SeguridadUtilTest` | Hash con sal (`sal:hash`), verificación de contraseña, hash de las cuentas de prueba del script SQL |
-| `util/FormatoYConstantesTest` | Fechas dd/MM/yyyy, formato de dinero, búsqueda en arreglos, constantes (3 intentos, 10 min) |
-| `modelo/BordadoTest` | Subtotal = cantidad × precio, validaciones de tipo, color, cantidad, precio y notas |
-| `modelo/OrdenTest` | Total, saldo, secuencia de estados, cuándo se puede modificar, fecha de cierre |
-| `modelo/PersonasYUsuariosTest` | Cliente, usuario, polimorfismo de roles y módulos, `UsuarioFactory`, `Sede`, `ResultadoReporte` |
-| `controlador/ControladoresTest` | Permisos por rol, orden sin bordados, pago mayor al saldo / futuro / sin medio, comprobante, clave mínima, rango de fechas |
+```bash
+mvn test                           # corre todas las pruebas (usa maven-surefire-plugin)
+target/surefire-reports/           # resultado de cada prueba
+target/site/jacoco/index.html      # reporte de cobertura (abrir en el navegador)
+```
+La **CI** de GitHub (`.github/workflows/ci.yml`) ejecuta `mvn test` en cada push y en cada Pull Request hacia `main`, y guarda el reporte de cobertura.
 
-Ejecutar: `mvn test`. Los reportes quedan en `target/surefire-reports/`. Ejemplo de prueba:
+### 10.1 Qué se prueba en cada capa
+```mermaid
+flowchart LR
+    V["Vista<br/>Swing"] --> C["Controlador"]
+    C --> M["Modelo"]
+    C --> D["DAO"]
+    D --> B[("Neon")]
+    classDef probada fill:#D3F0DC,stroke:#1F6B3A,color:#0F2A5C
+    classDef no fill:#E3E7EE,stroke:#8A9BB8,color:#3F4B5E
+    class C,M probada
+    class V,D,B no
+    U["Util<br/>Validador, Formato, SeguridadUtil"]:::probada
+    C -.-> U
+    M -.-> U
+```
+Las capas en verde (Util, Modelo y Controlador) están cubiertas por pruebas unitarias. La Vista (pantallas) y el DAO (SQL contra Neon) se prueban a mano o con pruebas de integración.
 
+| Capa | Qué se verifica | Clases de prueba |
+|---|---|---|
+| **Util** | Que los datos del usuario se validen y se den formato bien, y que las contraseñas se guarden cifradas | `ValidadorTest`, `SeguridadUtilTest`, `FormatoTest`, `ConstantesTest`, `NegocioExceptionTest` |
+| **Modelo** | Que cada objeto rechace datos inválidos y calcule bien (subtotal, total, saldo, estado) | `PersonaTest`, `ClienteTest`, `UsuarioTest`, `GerenteTest`, `DisenadorTest`, `UsuarioFactoryTest`, `SedeTest`, `BordadoTest`, `OrdenTest`, `PagoTest`, `ResultadoReporteTest` |
+| **Controlador** | Que cada rol solo use sus funciones y que se cumplan las reglas antes de guardar | `SesionTest`, `LoginControladorTest`, `UsuarioControladorTest`, `SedeControladorTest`, `OrdenControladorTest`, `PagoControladorTest`, `ReporteControladorTest` |
+
+### 10.2 Pruebas más importantes y su función
+| Prueba | Pruebas | Función: qué regla del negocio protege |
+|---|---|---|
+| `SesionTest` | 5 | Comprueba `Sesion.como(Rol.class)`, la pieza que decide **qué rol puede usar cada función**. Si el usuario no tiene el rol (o no hay sesión) lanza *"No tiene permisos para esta función."* |
+| `OrdenControladorTest` | 16 | Verifica los permisos de todo el flujo de órdenes: solo el **Vendedor** crea y modifica, solo el **Diseñador** avanza el estado, solo el **Gerente** elimina; una orden necesita al menos un bordado y el estado no se puede saltar |
+| `PagoControladorTest` | 9 | Protege el dinero: el pago debe ser un número mayor a cero, **no puede superar el saldo**, exige medio de pago, fecha válida y **no futura**; y el comprobante muestra abono, total, saldo y *FACTURA CERRADA* cuando se paga todo |
+| `UsuarioControladorTest` | 7 | Solo el **Gerente** administra usuarios; campos obligatorios, contraseña mínima de 6 caracteres, rol existente y el Gerente **no puede cambiar el estado de su propia cuenta** |
+| `OrdenTest` | 5 | Cálculos del modelo: `calcularTotal()` suma los subtotales, `getSaldo()` = total − pagado, `puedeModificarse()` solo en *Pendiente*, `siguienteEstado()` avanza sin saltos y `getFechaCierre()` da prioridad a la entrega |
+| `SeguridadUtilTest` | 4 | Seguridad de las contraseñas: el hash tiene formato `sal(32):hash(64)`, la clave correcta coincide y la incorrecta no, y dos hashes de la misma clave son distintos gracias a la **sal aleatoria** |
+| `ValidadorTest` | 6 | Validaciones de los formularios: vacío, solo dígitos (cédula, teléfono), correo, dinero (`$ 15.000` → 15000) y enteros |
+| `UsuarioFactoryTest` | 4 | Patrón **Factory**: cada rol de `Constantes.ROLES` crea su clase (`Gerente`, `Vendedor`, `Disenador`) y un rol desconocido se rechaza con un mensaje claro |
+| `BordadoTest` | 5 | El subtotal es cantidad × precio y se rechazan tipo o color vacíos, cantidad o precio menores o iguales a cero y textos demasiado largos |
+| `PersonaTest` | 5 | **Abstracción y polimorfismo**: `Persona` no se puede instanciar, valida cédula y nombre, y `toString()` devuelve la descripción propia de cada clase hija |
+| `ReporteControladorTest` | 3 | Solo el Gerente genera reportes; rechaza un rango de fechas donde *hasta* es anterior a *desde* y las fechas mal escritas |
+
+### 10.3 Ejemplos del código de las pruebas
+**Permisos por rol** (`SesionTest`): un Vendedor no puede usar funciones del Gerente.
 ```java
-@Test void subtotalEsCantidadPorPrecio() {
-    Bordado b = new Bordado("Escudo", "Rojo", 4, 2500, "");
-    assertEquals(10000, b.getSubtotal());
+@Test
+@DisplayName("como(): lanza 'No tiene permisos' si el rol es otro")
+void comoRolIncorrecto() {
+    UsuariosDePrueba.iniciarComoVendedor();
+    NegocioException e = assertThrows(NegocioException.class, () -> Sesion.como(Gerente.class));
+    assertEquals("No tiene permisos para esta función.", e.getMessage());
 }
 ```
 
-Las consultas SQL (DAO) se prueban manualmente contra Neon iniciando sesión con las cuentas de prueba.
+**Regla del saldo** (`PagoControladorTest`): el abono no puede ser mayor a lo que falta por pagar.
+```java
+@Test
+@DisplayName("El pago no puede superar el saldo pendiente")
+void superaElSaldo() {
+    UsuariosDePrueba.iniciarComoVendedor();
+    Orden o = UsuariosDePrueba.ordenConSaldo(50000, 30000);   // saldo 20.000
+    assertEquals("El valor del pago supera el saldo pendiente.", mensaje(o, "20.001", hoy, "Efectivo"));
+}
+```
+
+**Secuencia de estados** (`OrdenControladorTest`): el Diseñador no puede marcar una orden como *Entregada*; eso solo lo hace el Vendedor.
+```java
+@Test
+@DisplayName("avanzarEstado(): el Diseñador no puede marcar una orden como Entregada")
+void disenadorNoEntrega() {
+    UsuariosDePrueba.iniciarComoDisenador();
+    assertEquals("No es posible cambiar el estado sin cumplir la secuencia establecida.",
+            assertThrows(NegocioException.class, () -> ordenes.avanzarEstado(ordenEn("Listo para Entrega"))).getMessage());
+}
+```
+
+**Cálculos del modelo** (`OrdenTest`):
+```java
+Orden o = ordenConBordados();          // 2 x $5.000 + 1 x $3.000
+assertEquals(13000.0, o.calcularTotal());
+o.setTotal(13000);
+o.setTotalPagado(5000);
+assertEquals(8000.0, o.getSaldo());    // saldo = total - pagado
+```
+
+**Contraseñas con sal** (`SeguridadUtilTest`): la misma clave genera hashes distintos y aun así se verifica.
+```java
+String guardado = SeguridadUtil.generarHash("Jmym2026");     // "sal(32):hash(64)"
+assertTrue(SeguridadUtil.verificar("Jmym2026", guardado));
+assertNotEquals(SeguridadUtil.generarHash("Jmym2026"), SeguridadUtil.generarHash("Jmym2026"));
+```
+
+### 10.4 Cómo están escritas
+- Cada prueba está en el **mismo paquete** que la clase que prueba y se llama `<Clase>Test`.
+- `@DisplayName` explica en español qué comprueba cada prueba (se ve en el reporte).
+- `@AfterEach` llama a `Sesion.cerrar()` para que una prueba no deje sesión iniciada a la siguiente.
+- `UsuariosDePrueba` (en `src/test/.../controlador/`) no es una prueba: es una ayuda que crea un Gerente, un Vendedor o un Diseñador, inicia sesión **sin base de datos** y arma órdenes con saldo.
+- Se usan `assertEquals`, `assertTrue`/`assertFalse`, `assertNull`, `assertSame`, `assertArrayEquals`, `assertInstanceOf` y `assertThrows` para comprobar excepciones.
+
+### 10.5 Todas las clases de prueba
+| Paquete | Clase de prueba | Pruebas |
+|---|---|---|
+| util | `ValidadorTest` · `SeguridadUtilTest` · `FormatoTest` · `ConstantesTest` · `NegocioExceptionTest` | 6 · 4 · 4 · 3 · 2 |
+| modelo | `PersonaTest` · `ClienteTest` · `UsuarioTest` · `GerenteTest` · `DisenadorTest` · `UsuarioFactoryTest` | 5 · 3 · 4 · 4 · 2 · 4 |
+| modelo | `SedeTest` · `BordadoTest` · `OrdenTest` · `PagoTest` · `ResultadoReporteTest` | 3 · 5 · 5 · 2 · 3 |
+| controlador | `SesionTest` · `LoginControladorTest` · `UsuarioControladorTest` · `SedeControladorTest` | 5 · 3 · 7 · 3 |
+| controlador | `OrdenControladorTest` · `PagoControladorTest` · `ReporteControladorTest` | 16 · 9 · 3 |
+| controlador | `PagoControladorIT` (necesita Neon, `@Disabled`) | 3 omitidas |
+
+### 10.6 Lo que todavía no cubren
+Las pruebas con base de datos quedan pendientes: los **DAO**, el inicio de sesión completo (bloqueo al 3.er intento fallido), `registrar()` hasta insertar el pago y
+el flujo Pendiente → En Producción → Listo → Entregada con saldo en cero. Esos casos están descritos en `PagoControladorIT` y se pueden activar con una base de datos de prueba.
 
 ## 11. Cuentas de prueba (contraseña de todas: `Jmym2026`)
 | Sede | Vendedor | Diseñador |
@@ -560,3 +668,9 @@ Los colores y la tipografía están definidos en `vista/Estilo.java`.
 - Look and Feel: multiplataforma de Swing (`UIManager.getCrossPlatformLookAndFeelClassName()`), igual en todos los sistemas.
 - Fuente: `SansSerif`, tamaño 13 (títulos en negrita de 26).
 - Logo: `src/main/resources/logo.png`; reemplázalo por el archivo original para que se vea con más nitidez.
+
+## 15. Trabajo en equipo
+- Cómo clonar, crear ramas, escribir commits y abrir Pull Requests: **`CONTRIBUTING.md`**.
+- Quién es responsable de cada módulo y de cada prueba: **`docs/REPARTO_DE_TRABAJO.md`** (también `docs/TAREAS_POR_INTEGRANTE.md`, `docs/PLAN_DE_COMMITS.md` y `docs/SUBIR_A_GITHUB.md`).
+- Detalle de las pruebas por capa: **`docs/PRUEBAS_POR_CAPA.md`**.
+- Cada push y cada Pull Request hacia `main` dispara la **CI** (`.github/workflows/ci.yml`), que compila y corre `mvn test` automáticamente.
